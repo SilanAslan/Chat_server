@@ -3,8 +3,6 @@
 
 import socket, threading
 
-
-
 # Constants to be used
 HOST_IP = socket.gethostbyname(socket.gethostname())
 HOST_PORT = 12345
@@ -19,10 +17,12 @@ server_socket.listen()
 # Dictionary to store connected client sockets and their names
 clients = {}
 
+
 def broadcast_message(message: bytes) -> None:
     """ Sends a message to ALL clients connected to the server"""
     for client, _ in clients.items():
         client.send(message)
+
 
 def receive_message(client_socket) -> None:
     """ Receives an incoming message from a specific client and forward the message to be broadcast """
@@ -41,7 +41,7 @@ def receive_message(client_socket) -> None:
                 broadcast_message(f'***{name} has left the chat due to a connection error!***'.encode(ENCODER))
                 return
 
-            message = f'{name}: {message}'.encode(ENCODER) # Encodes to be used for broadcasting
+            message = f'{name}: {message}'.encode(ENCODER)  # Encodes to be used for broadcasting
             broadcast_message(message)
 
         except ConnectionResetError:
@@ -68,7 +68,7 @@ def connect_client() -> None:
         client_socket, client_adress = server_socket.accept()
         print(f'Connected with {client_adress}...')
 
-        #Sends a NAME flag to prompt the client for their name
+        # Sends a NAME flag to prompt the client for their name
         client_socket.send('USERNAME'.encode(ENCODER))
         client_name = client_socket.recv(BYTESIZE).decode(ENCODER)
 
@@ -76,11 +76,11 @@ def connect_client() -> None:
         clients[client_socket] = client_name
 
         # Informing about the new client and welcome them
-        print(f'New client: {client_name}\n') # The server
+        print(f'New client: {client_name}\n')  # The server
 
         # Welcome ASCII art sent to the new client
         welcome_art = r"""
-        
+
 _________________________________________________
             ________________________             |\
            |                        |            | \
@@ -102,25 +102,28 @@ ______|__________________________ |\  ||_____|\__|
         """
         client_socket.send(welcome_art.encode(ENCODER))
 
-        #Broadcast that the new user has joined the chat
-        broadcast_message(f'\n***{client_name} has joined the chat!***\n'.encode(ENCODER)) # All in the chat
+        # Broadcast that the new user has joined the chat
+        broadcast_message(f'\n***{client_name} has joined the chat!***\n'.encode(ENCODER))  # All in the chat
 
         welcome_message = f'''\nWelcome to Shichat, {client_name}!
 Enjoy your stay!
 Feel free to start typing your message below:\n'''
 
-        client_socket.send(welcome_message.encode(ENCODER)) # The individual client
+        client_socket.send(welcome_message.encode(ENCODER))  # The individual client
 
-        # Start thread for receiving messages from the new client
-        receive_thread = threading.Thread(target = receive_message, args = (client_socket,))
+        # Starts thread for receiving messages from the new client.
+        # Uses daemon for automatically ending the thread with the main program.
+        receive_thread = threading.Thread(target=receive_message, daemon=True, args=(client_socket,))
         receive_thread.start()
 
 
-
-
-
-
-# Starts the server
+# Starts the server and shut it down with user interruption.
 print('Server is listening for incoming connections...\n')
-connect_client()
+try:
+    connect_client()
+except KeyboardInterrupt:
+    print('Server is shutting down...')
+finally:
+    server_socket.close()
+    print('Server has been closed!')
 

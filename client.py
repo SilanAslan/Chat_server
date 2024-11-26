@@ -37,13 +37,13 @@ def receive_message() -> None:
             client_socket.close()
             break
 
-# Threads to send and receive messages
-receive_thread = threading.Thread(target = receive_message)
-send_thread = threading.Thread(target = send_message)
-
-# Starts the client
+# Threads to receive messages, daemon for automatically ending the thread with the main program.
+receive_thread = threading.Thread(target = receive_message, daemon = True)
 receive_thread.start()
-send_thread.start()
 
-
-
+# Sends message in the main thread and closes the connection with exception or user interruption
+try:
+    send_message()
+except(Exception, KeyboardInterrupt):
+    print('Closing the connection...')
+    client_socket.close()
